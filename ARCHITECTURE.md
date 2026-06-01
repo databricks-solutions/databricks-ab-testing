@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Databricks Model Serving A/B Testing Framework is a lakehouse-native system that enables controlled experiments on machine learning models served via Databricks Model Serving. The architecture follows a producer-consumer pattern with clear separation of concerns across experiment management, model serving, and results analysis.
+The Databricks A/B Testing Framework is a lakehouse-native system that enables controlled experiments across Databricks-hosted applications. The architecture follows a producer-consumer pattern with clear separation of concerns across experiment management, serving/application execution, and results analysis. This document uses Model Serving as the primary reference implementation.
 
 ## System Architecture
 
@@ -95,6 +95,8 @@ The Databricks Model Serving A/B Testing Framework is a lakehouse-native system 
 
 ## Core Components
 
+The reusable framework core is deployment-agnostic (experiment lifecycle, deterministic assignment, flag resolution, and results analysis). The runtime shown here is a Model Serving reference implementation.
+
 ### 1. Experiment Manager App
 
 **Technology**: Streamlit on Databricks Apps  
@@ -132,7 +134,7 @@ CREATE TABLE experiments (
 
 #### Data Sync
 - Lakebase experiments table is synced to Unity Catalog via **Federated Catalog**
-- Model serving reads from federated catalog (read-only, low-latency)
+- Runtime components read from federated catalog (read-only, low-latency)
 - Ensures single source of truth while enabling high-performance queries
 
 ### 2. Model Serving Integration
@@ -740,7 +742,7 @@ resources:
 
 ### Adding New Metrics
 
-1. **Define in app config** (`model_serving_ab_testing/experiment_manager_app/config.py`):
+1. **Define in app config** (`databricks_ab_testing/experiment_manager_app/config.py`):
 ```python
 KPI_METRICS = {
     "my_new_metric": {
@@ -750,7 +752,7 @@ KPI_METRICS = {
 }
 ```
 
-2. **Compute in user metrics** (`model_serving_ab_testing/results/create_user_metrics.py`):
+2. **Compute in user metrics** (`databricks_ab_testing/results/create_user_metrics.py`):
 ```python
 .agg(
     # ... existing metrics
@@ -762,7 +764,7 @@ KPI_METRICS = {
 
 ### Adding New Feature Flags
 
-1. **Define in model code** (`model_serving_ab_testing/model/src/CTRPyFunc.py`):
+1. **Define in model code** (`databricks_ab_testing/model/src/CTRPyFunc.py`):
 ```python
 my_new_flag = flags.get("my_new_flag", default_value)
 # Apply flag logic in _apply_flags_np or predict

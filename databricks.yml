@@ -1,5 +1,5 @@
 bundle:
-  name: model_serving_ab_testing
+  name: databricks_ab_testing
 
 permissions:
   - level: CAN_MANAGE
@@ -114,7 +114,6 @@ targets:
     mode: production
     default: true
     workspace:
-      # Keep host workspace-agnostic by reading from environment at deploy time.
-      # Example: export DATABRICKS_HOST="https://adb-<workspace-id>.<region>.azuredatabricks.net"
-      host: ${env.DATABRICKS_HOST}
+      # Set DATABRICKS_HOST in your shell/profile before bundle commands.
+      # Do not interpolate workspace.host in bundle config.
       root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}

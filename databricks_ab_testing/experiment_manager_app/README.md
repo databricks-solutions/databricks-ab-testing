@@ -24,7 +24,7 @@ Streamlit application for managing A/B experiments end-to-end: create, edit, pub
 ### 1) Install
 
 ```bash
-pip install -r model_serving_ab_testing/experiment_manager_app/requirements.txt
+pip install -r databricks_ab_testing/experiment_manager_app/requirements.txt
 ```
 
 ### 2) Configure environment
@@ -53,7 +53,7 @@ export DATABRICKS_CONFIG_PROFILE=your-profile
 From the repo root:
 
 ```bash
-streamlit run model_serving_ab_testing/experiment_manager_app/app.py
+streamlit run databricks_ab_testing/experiment_manager_app/app.py
 ```
 
 ## Data Model
@@ -153,12 +153,12 @@ Overlap safety:
 
 ## Architecture
 
-- `model_serving_ab_testing/experiment_manager_app/app.py`: Streamlit UI and orchestration
-- `model_serving_ab_testing/experiment_manager_app/db.py`: DB engine, cached connection, query helpers, and bootstrap:
+- `databricks_ab_testing/experiment_manager_app/app.py`: Streamlit UI and orchestration
+- `databricks_ab_testing/experiment_manager_app/db.py`: DB engine, cached connection, query helpers, and bootstrap:
   - `ensure_lakebase_table_exists()` – creates schema/table in Lakebase Postgres if missing
   - `ensure_uc_privileges()` – optional UC grants via SQL Warehouse (if run with an admin identity)
-- `model_serving_ab_testing/experiment_manager_app/stats.py`: Normal quantiles and sample size math
-- `model_serving_ab_testing/experiment_manager_app/experiment_service.py`: CRUD and status transitions (publish/unpublish), overlap checks
+- `databricks_ab_testing/experiment_manager_app/stats.py`: Normal quantiles and sample size math
+- `databricks_ab_testing/experiment_manager_app/experiment_service.py`: CRUD and status transitions (publish/unpublish), overlap checks
 
 Notable implementation details:
 
@@ -180,7 +180,7 @@ You can safely change KPI names/columns (e.g., `is_return_7days`) so long as you
 This app can be deployed like any Streamlit app. On Databricks Apps, either:
 
 - Deploy via bundle (preferred) with an `apps` resource in `resources/apps.yml`, or
-- Deploy from the Apps UI by selecting the Workspace source path that contains this folder (it must include `requirements.txt` and `app.py`).
+- Deploy from the Apps UI by selecting the Workspace source path that contains this folder (it must include `app.yml`, `requirements.txt`, and `app.py`).
 
 Ensure the runtime can obtain an OAuth token and reach your Lakebase Postgres endpoint.
 

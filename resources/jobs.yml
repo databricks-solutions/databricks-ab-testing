@@ -6,14 +6,14 @@ resources:
         # Step 1: Create dimension tables
         - task_key: generate_ad_dim_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/setup/generate_ad_dim.py
+            notebook_path: ../databricks_ab_testing/setup/generate_ad_dim.py
             source: WORKSPACE
             base_parameters:
               ad_dim_table_path: ${var.ad_dim_table_path}
 
         - task_key: generate_user_dim_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/setup/generate_user_dim.py
+            notebook_path: ../databricks_ab_testing/setup/generate_user_dim.py
             source: WORKSPACE
             base_parameters:
               user_dim_table_path: ${var.user_dim_table_path}
@@ -24,7 +24,7 @@ resources:
             - task_key: generate_ad_dim_task
             - task_key: generate_user_dim_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/setup/generate_user_events.py
+            notebook_path: ../databricks_ab_testing/setup/generate_user_events.py
             source: WORKSPACE
             base_parameters:
               user_events_table_path: ${var.user_events_table_path}
@@ -36,7 +36,7 @@ resources:
           depends_on:
             - task_key: generate_ad_dim_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/setup/generate_ad_features.py
+            notebook_path: ../databricks_ab_testing/setup/generate_ad_features.py
             source: WORKSPACE
             base_parameters:
               ad_features_table_path: ${var.ad_features_table_path}
@@ -47,7 +47,7 @@ resources:
             - task_key: generate_user_dim_task
             - task_key: generate_user_events_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/setup/generate_user_features.py
+            notebook_path: ../databricks_ab_testing/setup/generate_user_features.py
             source: WORKSPACE
             base_parameters:
               user_features_table_path: ${var.user_features_table_path}
@@ -61,7 +61,7 @@ resources:
             - task_key: generate_ad_features_task
             - task_key: generate_user_events_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/setup/generate_training_data.py
+            notebook_path: ../databricks_ab_testing/setup/generate_training_data.py
             source: WORKSPACE
             base_parameters:
               training_features_table_path: ${var.training_features_table_path}
@@ -74,7 +74,7 @@ resources:
           depends_on:
             - task_key: generate_training_data_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/setup/train_ctr_model.py
+            notebook_path: ../databricks_ab_testing/setup/train_ctr_model.py
             source: WORKSPACE
             base_parameters:
               mlflow_experiment_name: ${resources.experiments.ctr_model_experiment.name}
@@ -84,7 +84,7 @@ resources:
         # Step 6: Create experiments table
         - task_key: create_experiments_table_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/setup/create_experiments_table.py
+            notebook_path: ../databricks_ab_testing/setup/create_experiments_table.py
             source: WORKSPACE
             base_parameters:
               root_path: ${workspace.root_path}/files
@@ -98,7 +98,7 @@ resources:
           depends_on:
             - task_key: create_experiments_table_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/setup/generate_historical_experiments.py
+            notebook_path: ../databricks_ab_testing/setup/generate_historical_experiments.py
             source: WORKSPACE
             base_parameters:
               root_path: ${workspace.root_path}/files
@@ -114,7 +114,7 @@ resources:
             - task_key: generate_user_dim_task
             - task_key: train_model_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/setup/generate_demo_inference_table.py
+            notebook_path: ../databricks_ab_testing/setup/generate_demo_inference_table.py
             source: WORKSPACE
             base_parameters:
               demo_inference_table_path: ${var.demo_inference_table_path}
@@ -131,7 +131,7 @@ resources:
       tasks:
         - task_key: ad_features
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/lakebase/synced_table_grants.py
+            notebook_path: ../databricks_ab_testing/lakebase/synced_table_grants.py
             source: WORKSPACE
             base_parameters:
               root_path: ${workspace.root_path}/files
@@ -141,7 +141,7 @@ resources:
               model_serving_service_principal_id: ${var.model_serving_service_principal_id}
         - task_key: user_features
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/lakebase/synced_table_grants.py
+            notebook_path: ../databricks_ab_testing/lakebase/synced_table_grants.py
             source: WORKSPACE
             base_parameters:
               root_path: ${workspace.root_path}/files
@@ -158,10 +158,10 @@ resources:
       tasks:
         - task_key: deploy
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/model/deploy.py
+            notebook_path: ../databricks_ab_testing/model/deploy.py
             source: WORKSPACE
             base_parameters:
-              root_path: ${workspace.root_path}/files/model_serving_ab_testing/model
+              root_path: ${workspace.root_path}/files/databricks_ab_testing/model
               catalog_name: ${var.catalog_name}
               schema_name: ${var.schema_name}
               mlflow_experiment_name: ${resources.experiments.ctr_model_wrapper_experiment.name}
@@ -183,7 +183,7 @@ resources:
       tasks:
         - task_key: create_user_metrics_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/results/create_user_metrics.py
+            notebook_path: ../databricks_ab_testing/results/create_user_metrics.py
             source: WORKSPACE
             base_parameters:
               user_events_table_path: ${var.user_events_table_path}
@@ -194,7 +194,7 @@ resources:
           depends_on:
             - task_key: create_user_metrics_task
           notebook_task:
-            notebook_path: ../model_serving_ab_testing/results/calculate_results.py
+            notebook_path: ../databricks_ab_testing/results/calculate_results.py
             source: WORKSPACE
             base_parameters:
               user_metrics_table_path: ${var.user_metrics_table_path}

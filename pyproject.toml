@@ -49,7 +49,7 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "**/__init__.py" = ["F401"]
 # Remove or update this if not needed:
-# "tests/unit/model_serving_ab_testing/..." = ["F403"]
+# "tests/unit/databricks_ab_testing/..." = ["F403"]
 
 [tool.ruff.format]
 quote-style = "preserve"
@@ -59,4 +59,4 @@ order-by-type = true
 relative-imports-order = "closest-to-furthest"
 extra-standard-library = ["typing"]
 section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
-known-first-party = ["model_serving_ab_testing"]
+known-first-party = ["databricks_ab_testing"]

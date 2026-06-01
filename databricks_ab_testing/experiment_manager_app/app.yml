@@ -1,0 +1,11 @@
+command: ["streamlit", "run", "app.py"]
+
+env:
+  - name: APP_ENV
+    value: dev
+  - name: AB_TESTING_SCHEMA_NAME
+    value: ab_testing
+  - name: EXPERIMENTS_TABLE_NAME
+    value: experiments
+  - name: BENCHMARKS_TABLE_NAME
+    value: metric_benchmarks
