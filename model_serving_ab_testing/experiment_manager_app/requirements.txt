@@ -1,0 +1,6 @@
+streamlit>=1.37,<2.0
+pandas>=2.2,<3.0
+databricks-sdk==0.73.0
+sqlalchemy==2.0.43
+psycopg[binary]==3.2.10
+statsmodels==0.14.5
