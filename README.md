@@ -1,9 +1,9 @@
-# Databricks Model Serving A/B Testing Framework
+# Databricks A/B Testing Framework
 
-A production-ready A/B testing framework for Databricks Model Serving that enables teams to run controlled experiments on model endpoints with deterministic user assignment, experiment tracking, and statistical evaluation.
+A production-ready A/B testing framework for Databricks workloads that enables teams to run controlled experiments with deterministic user assignment, experiment tracking, and statistical evaluation.
 
-> This setup also works for Databricks Apps.  
-> You can use the same experiment assignment, Lakebase-backed configuration, and results pipeline for app-driven recommendation flows in addition to model serving endpoints.
+> This framework works across Databricks deployment types: classic ML on Model Serving, agents on Model Serving, agents on Databricks Apps, and Databricks Apps backends.  
+> The repository remains opinionated around a Model Serving endpoint as the reference implementation.
 
 ## 🚀 Quick Start
 
@@ -14,9 +14,16 @@ A production-ready A/B testing framework for Databricks Model Serving that enabl
 **Need local environment variables?** Copy `.env.example` to `.env` and fill in your values.  
 For deployed environments, configure values in `databricks.yml` (via bundle variables/targets).
 
+## Supported Deployment Patterns
+
+- Classic ML model on Databricks Model Serving
+- Agent deployed on Databricks Model Serving
+- Agent backend deployed on Databricks Apps
+- Databricks Apps backend/service with deterministic assignment and experiment tracking
+
 ## Problem Statement
 
-Teams lack an easy, standardized way to perform A/B testing to understand how user behavior changes when new features or model versions are introduced through Databricks Model Serving.
+Teams lack an easy, standardized way to perform A/B testing to understand how user behavior changes when new features or model versions are introduced across Databricks-hosted applications.
 
 While Databricks supports traffic splitting between endpoints, it does not natively support sticky user assignments or experiment tracking—critical components for evaluating user-level impact over time. As a result, experimentation today is often ad hoc, manual, and inconsistent, making it difficult to attribute behavioral differences to specific model or feature changes.
 
@@ -27,9 +34,17 @@ Current approaches fall short:
 
 ## Solution Overview
 
-This framework provides an end-to-end A/B testing solution within the Databricks ecosystem that enables deterministic user routing, exposure logging, and experiment metric evaluation. It makes it simple for teams to launch, monitor, and analyze experiments on production model endpoints.
+This framework provides an end-to-end A/B testing solution within the Databricks ecosystem that enables deterministic user routing, exposure logging, and experiment metric evaluation. It makes it simple for teams to launch, monitor, and analyze experiments across production Databricks applications.
 
 ### Core Components
+
+The reusable framework core is deployment-agnostic:
+- Experiment definition and lifecycle management
+- Deterministic user assignment
+- Variant configuration and feature-flag resolution
+- Exposure/event joins and statistical evaluation
+
+This repository uses a Databricks Model Serving endpoint as the opinionated reference implementation for those core patterns.
 
 #### 1. Lakebase Experiment Tables
 Central source of truth for experiments, variants, treatment allocations, and status. Stores configuration metadata including:
@@ -52,7 +67,7 @@ A lightweight Databricks Streamlit application that allows teams to manage exper
 
 The app provides governance and reproducibility by interfacing directly with Lakebase experiment tables.
 
-#### 3. Model Serving Integration (PyFunc Hook)
+#### 3. Serving Integration (PyFunc Reference Implementation)
 Drop-in Python functionality that integrates directly with any Databricks model's predict() logic:
 - **Deterministic Assignment**: Consistent user-to-variant mapping using hashed user IDs
 - **Configuration Retrieval**: Fetches active experiment settings from Lakebase
@@ -60,7 +75,7 @@ Drop-in Python functionality that integrates directly with any Databricks model'
 - **Exposure Logging**: Tracks which users see which variants (via inference tables)
 - **Lakehouse Integration**: Pushes results back to Unity Catalog for unified analysis
 
-Supports optional metric computation and enables continuous experimentation without external orchestration.
+Supports optional metric computation and enables continuous experimentation without external orchestration. The same assignment/flagging pattern can be reused in Databricks Apps or agent backends.
 
 #### 4. Results Pipeline
 Automated statistical analysis of experiment outcomes:
@@ -69,12 +84,56 @@ Automated statistical analysis of experiment outcomes:
 - **Results Tables**: Stores test statistics, p-values, and significance determinations
 - **Experiment Evaluation**: Automatically processes completed experiments
 
+### Reuse in Other Application Types
+
+Use this pattern when your runtime is not a `CTRPyFunc` model endpoint (for example: Databricks Apps backend service, custom API, or agent runtime):
+
+1. Keep the reusable core pieces:
+   - `databricks_ab_testing/model/src/AssignmentService.py`
+   - Lakebase experiment table and config schema
+   - Results pipeline in `databricks_ab_testing/results/`
+2. Replace the runtime adapter:
+   - Treat `databricks_ab_testing/model/src/CTRPyFunc.py` as the example adapter
+   - Implement your own adapter in app/agent code that calls `AssignmentService`
+3. Apply variant flags in your runtime logic:
+   - Fetch `(experiment_id, variant, flags)` per request/user
+   - Use `flags` to change behavior (ranking params, prompt strategy, retrieval weights, business rules, etc.)
+4. Emit exposure metadata:
+   - Include `experiment_id` and `variant` in response/log payloads so the results pipeline can join exposures to outcomes
+
+Minimal adapter shape:
+
+```python
+from databricks_ab_testing.model.src.AssignmentService import AssignmentService
+
+assigner = AssignmentService(
+    db=lakebase_client,
+    experiments_table_path=experiments_table_path,
+    default_flags=default_flags,
+)
+
+def handle_request(user_id: str, request_payload: dict) -> dict:
+    experiment_id, variant, flags = assigner.assign_one(user_id)
+
+    # Replace this block with your app/agent/model logic
+    result = run_business_logic(request_payload, flags=flags)
+
+    return {
+        "experiment_id": experiment_id,
+        "variant": variant,
+        "flags": flags,
+        "result": result,
+    }
+```
+
+In short: `AssignmentService` is the reusable engine, and `CTRPyFunc` is just one concrete runtime integration.
+
 ## What's in This Repository
 
 ### Project Structure
 
 ```
-model_serving_ab_testing/
+databricks_ab_testing/
 ├── experiment_manager_app/      # 🎯 PRODUCTION - Experiment management UI
 │   ├── app.py                   # Main application UI and orchestration
 │   ├── config.py                # App configuration and KPI definitions
@@ -165,17 +224,19 @@ The demo setup generates **3 months (90 days) of synthetic data** to showcase th
 
 These components are **production-ready** and used in real deployments:
 
-**Core Infrastructure:**
+**Core Infrastructure (Reusable Across Deployment Types):**
 - **Experiment Manager App**: Create and manage experiments through a UI
-- **CTRPyFunc Wrapper**: Adds A/B testing to any model endpoint
 - **Assignment Service**: Deterministically assigns users to variants
 - **Results Pipeline**: Analyzes completed experiments with statistical rigor
 - **Lakebase Integration**: Low-latency experiment configuration lookup
 
+**Reference Runtime in this repository:**
+- **CTRPyFunc Wrapper**: Adds A/B testing to a Databricks Model Serving endpoint
+
 **Data Pipeline (Adapted for Production):**
 - **Feature Engineering**: Same notebooks, but point to real dimensions/events
 - **Model Training**: Trains on your actual historical data
-- **Results Analysis**: Processes real inference tables from model serving
+- **Results Analysis**: Processes real runtime exposure/inference tables (Model Serving in this reference setup)
 
 #### 🔄 Transition from Demo to Production
 
@@ -247,15 +308,15 @@ Teams use the Experiment Manager App to:
 When an experiment is published:
 - Configuration is written to the Lakebase experiments table
 - Safety checks ensure no date overlap with other active experiments
-- Experiment becomes immediately queryable by model serving endpoints
+- Experiment becomes immediately queryable by runtime components (Model Serving endpoint in this reference setup)
 
-### 3. User Assignment & Serving
-When a prediction request arrives:
+### 3. User Assignment & Runtime Execution
+When a runtime request arrives (Model Serving in this reference flow):
 1. **AssignmentService** queries active experiments from Lakebase
 2. User ID is deterministically hashed to assign control/treatment
 3. Appropriate feature flags are retrieved for the assigned variant
 4. **CTRPyFunc** applies flags to model behavior (temperature, boosts, etc.)
-5. Predictions are returned with experiment metadata
+5. Output is returned with experiment metadata
 
 ### 4. Exposure & Metrics Tracking
 - Inference tables automatically capture experiment_id and variant
@@ -272,7 +333,7 @@ After experiment completion:
 
 - **Databricks Ecosystem**:
   - Unity Catalog for data governance
-  - Model Serving for inference endpoints
+  - Model Serving for inference endpoints (reference runtime in this repository)
   - Lakebase (PostgreSQL) for low-latency lookups
   - MLflow for model tracking and serving
   - Databricks Apps for UI deployment
@@ -300,6 +361,7 @@ After experiment completion:
 - **Governance**: Centralized tracking with full experiment lineage
 - **Scalability**: Handles production-scale traffic with sub-millisecond lookups
 - **Flexibility**: Support for any model endpoint and metric type
+- **Portability**: Core framework patterns apply across Model Serving, agents, and Databricks Apps backends
 - **Integration**: Native Databricks ecosystem—no external tools required
 
 ## Example Use Cases

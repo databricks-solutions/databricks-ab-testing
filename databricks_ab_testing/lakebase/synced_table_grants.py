@@ -16,12 +16,12 @@ if root_path and root_path not in sys.path:
 # COMMAND ----------
 
 from databricks.sdk import WorkspaceClient
-from model_serving_ab_testing.lakebase.utils import (
+from databricks_ab_testing.lakebase.utils import (
     pg_cursor,
     ensure_database_instance_role,
     grant_schema_and_table_permissions,
 )
-from model_serving_ab_testing.utils import get_app_service_principal_id
+from databricks_ab_testing.utils import get_app_service_principal_id
 
 # COMMAND ----------
 

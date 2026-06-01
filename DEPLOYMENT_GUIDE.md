@@ -1,4 +1,4 @@
-# Databricks Model Serving A/B Testing Framework - Deployment Guide
+# Databricks A/B Testing Framework - Deployment Guide
 
 This guide outlines the deployment steps for the end-to-end A/B testing framework.
 
@@ -6,8 +6,8 @@ This guide outlines the deployment steps for the end-to-end A/B testing framewor
 > This guide deploys the framework with **demo/synthetic data** for validation and learning.  
 > For production deployment with real data, see [Transitioning to Production](#transitioning-to-production) after completing the demo setup.
 >
-> **Databricks Apps Compatibility**  
-> The same setup can be used for Databricks Apps flows as well. The Experiment Manager app, Lakebase experiment config, deterministic assignment logic, and results pipeline are reusable whether traffic originates from a Model Serving endpoint or a Databricks App backend.
+> **Multi-Deployment Compatibility**  
+> The same setup can be used for multiple Databricks deployment types (Model Serving endpoints, agents on Model Serving, agents on Databricks Apps, and Databricks Apps backends). This guide uses Model Serving as the concrete reference flow.
 
 ## Quick Deploy (Automated)
 
@@ -307,8 +307,8 @@ The deployment above sets up the framework with **synthetic demo data**. To use 
 
 **🎯 Production Components (Keep):**
 - Experiment Manager App
-- CTRPyFunc wrapper (`model_serving_ab_testing/model/src/`)
-- Results pipeline (`model_serving_ab_testing/results/`)
+- CTRPyFunc wrapper (`databricks_ab_testing/model/src/`)
+- Results pipeline (`databricks_ab_testing/results/`)
 - Lakebase infrastructure
 - All `resources/` configuration
 

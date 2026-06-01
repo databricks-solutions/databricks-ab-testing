@@ -24,7 +24,7 @@ import json
 import uuid
 from datetime import date, timedelta
 from databricks.sdk import WorkspaceClient
-from model_serving_ab_testing.lakebase.utils import pg_cursor
+from databricks_ab_testing.lakebase.utils import pg_cursor
 
 # COMMAND ----------
 
