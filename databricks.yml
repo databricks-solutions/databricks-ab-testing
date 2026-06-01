@@ -1,0 +1,120 @@
+bundle:
+  name: model_serving_ab_testing
+
+permissions:
+  - level: CAN_MANAGE
+    user_name: ${workspace.current_user.userName}
+
+variables:
+  model_serving_service_principal_id:
+    description: Model serving service principal application_id (UUID)
+    default: # TODO: add your Model Serving Service Principal Application ID here
+
+  catalog_name: # TODO: update if your catalog name is different
+    description: Unity Catalog Catalog name
+    default: ab_testing_${bundle.target}
+
+  secret_scope_name: # TODO: update if your secret scope name is different
+    description: secret scope containing service principal client id/secret
+    default: ab_testing
+
+  # Core
+  schema_name:
+    description: Unity Catalog Schema name
+    default: ab_testing
+
+  volume_name:
+    description: Unity Catalog Volume name
+    default: artifacts
+
+  # Dimension Tables
+  user_dim_table_path:
+    default: ${var.catalog_name}.${var.schema_name}.user_dim
+
+  ad_dim_table_path:
+    default: ${var.catalog_name}.${var.schema_name}.ad_dim
+
+  # Features
+  user_features_table_path:
+    default: ${var.catalog_name}.${var.schema_name}.user_features
+
+  ad_features_table_path:
+    default: ${var.catalog_name}.${var.schema_name}.ad_features
+
+  training_features_table_path:
+    default: ${var.catalog_name}.${var.schema_name}.training_features
+
+  # Modeling
+  registered_model_path:
+    default: ${var.catalog_name}.${var.schema_name}.ctr_model
+
+  # Lakebase
+  lakebase_instance_name:
+    description: Name of the lakebase instance
+    default: ab-testing
+
+  lakebase_database_name:
+    description: Name of the lakebase database
+    default: ${var.catalog_name}
+
+  lakebase_instance_capacity:
+    description: Capacity of the lakebase instance
+    default: CU_1
+
+  lakebase_catalog_name:
+    description: Name of federated database catalog
+    default: ${var.catalog_name}_lakebase
+
+  # Experiment Manager App
+  lakebase_experiments_table_path:
+    default: ${var.catalog_name}.${var.schema_name}.experiments
+
+  # Metric Benchmarks
+  ab_testing_metric_benchmarks_table_path:
+    default: ${var.catalog_name}.${var.schema_name}.metric_benchmarks
+
+  lakebase_metric_benchmarks_synced_table_path:
+    default: ${var.ab_testing_metric_benchmarks_table_path}_synced
+
+  # Model Serving
+  endpoint_name:
+    description: Model serving endpoint name
+    default: ctr_model
+
+  inference_table_path:
+    description: Model serving inference table name (real production endpoint)
+    default: ${var.catalog_name}.${var.schema_name}.${var.endpoint_name}_payload
+
+  demo_inference_table_path:
+    description: Demo inference table with controlled outcomes for showcasing framework
+    default: ${var.catalog_name}.${var.schema_name}.demo_${var.endpoint_name}_payload
+
+  # A/B testing results
+  experiments_table_path:
+    description: Experiments table from Lakebase (federated catalog)
+    default: ${var.lakebase_catalog_name}.${var.schema_name}.experiments
+
+  user_events_table_path:
+    description: Target table for mock user events
+    default: ${var.catalog_name}.${var.schema_name}.user_events
+
+  user_metrics_table_path:
+    description: Target table for user-level metrics
+    default: ${var.catalog_name}.${var.schema_name}.user_metrics
+
+  results_table_path:
+    description: Target table for results
+    default: ${var.catalog_name}.${var.schema_name}.results
+
+include:
+  - ./resources/*.yml
+
+targets:
+  dev:
+    mode: production
+    default: true
+    workspace:
+      # Keep host workspace-agnostic by reading from environment at deploy time.
+      # Example: export DATABRICKS_HOST="https://adb-<workspace-id>.<region>.azuredatabricks.net"
+      host: ${env.DATABRICKS_HOST}
+      root_path: /Workspace/Users/${workspace.current_user.userName}/.bundle/${bundle.name}/${bundle.target}

@@ -1,0 +1,62 @@
+[tool.poetry]
+name = "model-serving-ab-testing"
+version = "0.0.1"
+description = "Databricks Model Serving A/B Testing utilities and library"
+authors = ["Databricks PS <ps@databricks.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+psycopg = { version = "3.2.12", extras = ["binary"] }
+databricks-sdk = "0.73.0"
+mlflow = "3.6.0"
+scikit-learn = "1.7.2"
+python = "^3.10"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.7.0"
+pytest = "^8.0.0"
+black = "^24.0.0"
+mypy = "^1.10.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
+
+exclude = [
+    "notebooks",
+    "notebooks/**", 
+    "__pycache__",
+    ".venv",
+    ".git",
+    ".mypy_cache",
+    ".ruff_cache",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "C",  # flake8-comprehensions
+    "B",  # flake8-bugbear
+]
+
+
+[tool.ruff.lint.per-file-ignores]
+"**/__init__.py" = ["F401"]
+# Remove or update this if not needed:
+# "tests/unit/model_serving_ab_testing/..." = ["F403"]
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint.isort]
+order-by-type = true
+relative-imports-order = "closest-to-furthest"
+extra-standard-library = ["typing"]
+section-order = ["future", "standard-library", "third-party", "first-party", "local-folder"]
+known-first-party = ["model_serving_ab_testing"]

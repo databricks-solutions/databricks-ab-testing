@@ -1,0 +1,38 @@
+resources:
+  database_instances:
+    ab_testing_database_instance:
+      name: ${var.lakebase_instance_name}
+      capacity: ${var.lakebase_instance_capacity}
+
+  database_catalogs:
+    ab_testing_database_catalog:
+      database_instance_name: ${resources.database_instances.ab_testing_database_instance.name}
+      name: ${var.lakebase_catalog_name}
+      database_name: ${var.lakebase_database_name}
+      create_database_if_not_exists: true
+
+  synced_database_tables:
+    user_features_synced_table:
+      name: ${var.user_features_table_path}_synced
+      database_instance_name: ${resources.database_instances.ab_testing_database_instance.name}
+      logical_database_name: ${var.lakebase_database_name}
+      spec:
+        source_table_full_name: ${var.user_features_table_path}
+        scheduling_policy: TRIGGERED
+        primary_key_columns:
+          - user_id
+        new_pipeline_spec:
+          storage_catalog: ${var.catalog_name}
+          storage_schema: ${resources.schemas.ab_testing_schema.name}
+    ad_features_synced_table:
+      name: ${var.ad_features_table_path}_synced
+      database_instance_name: ${resources.database_instances.ab_testing_database_instance.name}
+      logical_database_name: ${var.lakebase_database_name}
+      spec:
+        source_table_full_name: ${var.ad_features_table_path}
+        scheduling_policy: TRIGGERED
+        primary_key_columns:
+          - ad_id
+        new_pipeline_spec:
+          storage_catalog: ${var.catalog_name}
+          storage_schema: ${resources.schemas.ab_testing_schema.name}

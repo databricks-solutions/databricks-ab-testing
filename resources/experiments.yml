@@ -1,0 +1,8 @@
+resources:
+  experiments:
+    ctr_model_experiment:
+      name: /Workspace/Users/${workspace.current_user.userName}/ctr_model
+      artifact_location: dbfs:/Volumes/${var.catalog_name}/${var.schema_name}/${var.volume_name}/ctr_model
+    ctr_model_wrapper_experiment:
+      name: /Workspace/Users/${workspace.current_user.userName}/ctr_model_wrapper
+      artifact_location: dbfs:/Volumes/${var.catalog_name}/${var.schema_name}/${var.volume_name}/ctr_model_wrapper

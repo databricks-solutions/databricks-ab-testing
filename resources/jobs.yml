@@ -1,0 +1,205 @@
+resources:
+  jobs:
+    ab_testing_setup_job:
+      name: ab_testing_setup
+      tasks:
+        # Step 1: Create dimension tables
+        - task_key: generate_ad_dim_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/setup/generate_ad_dim.py
+            source: WORKSPACE
+            base_parameters:
+              ad_dim_table_path: ${var.ad_dim_table_path}
+
+        - task_key: generate_user_dim_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/setup/generate_user_dim.py
+            source: WORKSPACE
+            base_parameters:
+              user_dim_table_path: ${var.user_dim_table_path}
+
+        # Step 2: Generate user events (needs user_dim + ad_dim)
+        - task_key: generate_user_events_task
+          depends_on:
+            - task_key: generate_ad_dim_task
+            - task_key: generate_user_dim_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/setup/generate_user_events.py
+            source: WORKSPACE
+            base_parameters:
+              user_events_table_path: ${var.user_events_table_path}
+              user_dim_table_path: ${var.user_dim_table_path}
+              ad_dim_table_path: ${var.ad_dim_table_path}
+
+        # Step 3: Generate features (needs dim tables + events)
+        - task_key: generate_ad_features_task
+          depends_on:
+            - task_key: generate_ad_dim_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/setup/generate_ad_features.py
+            source: WORKSPACE
+            base_parameters:
+              ad_features_table_path: ${var.ad_features_table_path}
+              ad_dim_table_path: ${var.ad_dim_table_path}
+
+        - task_key: generate_user_features_task
+          depends_on:
+            - task_key: generate_user_dim_task
+            - task_key: generate_user_events_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/setup/generate_user_features.py
+            source: WORKSPACE
+            base_parameters:
+              user_features_table_path: ${var.user_features_table_path}
+              user_dim_table_path: ${var.user_dim_table_path}
+              user_events_table_path: ${var.user_events_table_path}
+
+        # Step 4: Generate training data (needs features + events)
+        - task_key: generate_training_data_task
+          depends_on:
+            - task_key: generate_user_features_task
+            - task_key: generate_ad_features_task
+            - task_key: generate_user_events_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/setup/generate_training_data.py
+            source: WORKSPACE
+            base_parameters:
+              training_features_table_path: ${var.training_features_table_path}
+              user_events_table_path: ${var.user_events_table_path}
+              user_features_table_path: ${var.user_features_table_path}
+              ad_features_table_path: ${var.ad_features_table_path}
+
+        # Step 5: Train model (needs training data)
+        - task_key: train_model_task
+          depends_on:
+            - task_key: generate_training_data_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/setup/train_ctr_model.py
+            source: WORKSPACE
+            base_parameters:
+              mlflow_experiment_name: ${resources.experiments.ctr_model_experiment.name}
+              training_features_table_path: ${var.training_features_table_path}
+              registered_model_path: ${var.registered_model_path}
+
+        # Step 6: Create experiments table
+        - task_key: create_experiments_table_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/setup/create_experiments_table.py
+            source: WORKSPACE
+            base_parameters:
+              root_path: ${workspace.root_path}/files
+              lakebase_instance_name: ${var.lakebase_instance_name}
+              lakebase_experiments_table_path: ${var.lakebase_experiments_table_path}
+              model_serving_service_principal_id: ${var.model_serving_service_principal_id}
+              experiment_manager_app_name: ${resources.apps.experiment_manager_app.name}
+
+        # Step 7: Generate historical experiments (needs experiments table)
+        - task_key: generate_historical_experiments_task
+          depends_on:
+            - task_key: create_experiments_table_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/setup/generate_historical_experiments.py
+            source: WORKSPACE
+            base_parameters:
+              root_path: ${workspace.root_path}/files
+              lakebase_instance_name: ${var.lakebase_instance_name}
+              lakebase_database_name: ${var.lakebase_database_name}
+              lakebase_experiments_table_path: ${var.lakebase_experiments_table_path}
+
+        # Step 8: Generate demo inference table (needs historical experiments + features + model)
+        - task_key: generate_demo_inference_table_task
+          depends_on:
+            - task_key: generate_historical_experiments_task
+            - task_key: generate_ad_features_task
+            - task_key: generate_user_dim_task
+            - task_key: train_model_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/setup/generate_demo_inference_table.py
+            source: WORKSPACE
+            base_parameters:
+              demo_inference_table_path: ${var.demo_inference_table_path}
+              experiments_table_path: ${var.experiments_table_path}
+              user_dim_table_path: ${var.user_dim_table_path}
+              ad_features_table_path: ${var.ad_features_table_path}
+              registered_model_path: ${var.registered_model_path}
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
+
+    ab_testing_features_synced_table_grants_job:
+      name: ab_testing_features_synced_table_grants
+      tasks:
+        - task_key: ad_features
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/lakebase/synced_table_grants.py
+            source: WORKSPACE
+            base_parameters:
+              root_path: ${workspace.root_path}/files
+              lakebase_instance_name: ${var.lakebase_instance_name}
+              lakebase_table_path: ${var.ad_features_table_path}_synced
+              experiment_manager_app_name: ${resources.apps.experiment_manager_app.name}
+              model_serving_service_principal_id: ${var.model_serving_service_principal_id}
+        - task_key: user_features
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/lakebase/synced_table_grants.py
+            source: WORKSPACE
+            base_parameters:
+              root_path: ${workspace.root_path}/files
+              lakebase_instance_name: ${var.lakebase_instance_name}
+              lakebase_table_path: ${var.user_features_table_path}_synced
+              experiment_manager_app_name: ${resources.apps.experiment_manager_app.name}
+              model_serving_service_principal_id: ${var.model_serving_service_principal_id}
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
+
+    ab_testing_deploy_model_wrapper_job:
+      name: ab_testing_deploy_model_wrapper
+      tasks:
+        - task_key: deploy
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/model/deploy.py
+            source: WORKSPACE
+            base_parameters:
+              root_path: ${workspace.root_path}/files/model_serving_ab_testing/model
+              catalog_name: ${var.catalog_name}
+              schema_name: ${var.schema_name}
+              mlflow_experiment_name: ${resources.experiments.ctr_model_wrapper_experiment.name}
+              registered_model_path: ${var.registered_model_path}
+              lakebase_experiments_table_path: ${var.lakebase_experiments_table_path}
+              lakebase_ad_features_table_path: ${var.ad_features_table_path}_synced
+              lakebase_user_features_table_path: ${var.user_features_table_path}_synced
+              secret_scope_name: ${var.secret_scope_name}
+              lakebase_instance_name: ${var.lakebase_instance_name}
+              lakebase_database_name: ${var.lakebase_database_name}
+              model_serving_service_principal_id: ${var.model_serving_service_principal_id}
+              endpoint_name: ${var.endpoint_name}
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED
+
+    ab_testing_results_pipeline_job:
+      name: ab_testing_results_pipeline
+      tasks:
+        - task_key: create_user_metrics_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/results/create_user_metrics.py
+            source: WORKSPACE
+            base_parameters:
+              user_events_table_path: ${var.user_events_table_path}
+              user_metrics_table_path: ${var.user_metrics_table_path}
+              experiments_table_path: ${var.experiments_table_path}
+              inference_table_path: ${var.demo_inference_table_path} # Use demo by default
+        - task_key: calculate_results_task
+          depends_on:
+            - task_key: create_user_metrics_task
+          notebook_task:
+            notebook_path: ../model_serving_ab_testing/results/calculate_results.py
+            source: WORKSPACE
+            base_parameters:
+              user_metrics_table_path: ${var.user_metrics_table_path}
+              results_table_path: ${var.results_table_path}
+              experiments_table_path: ${var.experiments_table_path}
+      queue:
+        enabled: true
+      performance_target: PERFORMANCE_OPTIMIZED

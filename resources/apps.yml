@@ -1,0 +1,22 @@
+resources:
+  apps:
+    experiment_manager_app:
+      name: experiment-manager-app-${bundle.target}
+      description: Streamlit app for A/B testing experiment management
+      source_code_path: ../model_serving_ab_testing/experiment_manager_app
+      command: ["streamlit", "run", "app.py"]
+      env:
+        - name: APP_ENV
+          value: ${bundle.target}
+        - name: AB_TESTING_SCHEMA_NAME
+          value: ${var.schema_name}
+        - name: EXPERIMENTS_TABLE_NAME
+          value: experiments
+        - name: BENCHMARKS_TABLE_NAME
+          value: metric_benchmarks
+      resources:
+        - name: "database_connection"
+          database:
+            database_name: ${resources.database_catalogs.ab_testing_database_catalog.database_name}
+            instance_name: ${resources.database_instances.ab_testing_database_instance.name}
+            permission: "CAN_CONNECT_AND_CREATE"

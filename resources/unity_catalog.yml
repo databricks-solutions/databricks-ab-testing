@@ -1,0 +1,11 @@
+resources:
+  schemas:
+    ab_testing_schema:
+      catalog_name: ${var.catalog_name}
+      name: ${var.schema_name}
+
+  volumes:
+    ab_testing_volume:
+      catalog_name: ${var.catalog_name}
+      name: ${var.volume_name}
+      schema_name: ${resources.schemas.ab_testing_schema.name}
